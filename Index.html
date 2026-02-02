@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <title>Smart Camera</title>
+    <!-- เพิ่ม Font ให้ดูทันสมัย -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- General Setup --- */
+        body {
+            font-family: 'Prompt', sans-serif;
+            margin: 0;
+            padding: 0;
+            /* เปลี่ยนพื้นหลังเป็นโทนสีม่วงเข้ม Cyberpunk */
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* --- Main Card --- */
+        .container {
+            width: 90%;
+            max-width: 500px;
+            background: rgba(0, 0, 0, 0.5); /* พื้นหลังเข้มขึ้น */
+            backdrop-filter: blur(15px); /* เอฟเฟกต์กระจกฝ้า */
+            border: 1px solid rgba(255, 0, 204, 0.2); /* ขอบสีชมพูจางๆ */
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 0 40px rgba(118, 75, 162, 0.4); /* เงาสีม่วงฟุ้งๆ */
+            text-align: center;
+            animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* --- Header --- */
+        .header {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: #ff00cc; /* เปลี่ยนเป็นสีชมพูนีออน */
+            text-shadow: 0 0 10px rgba(255, 0, 204, 0.6);
+            margin-bottom: 25px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* --- Button --- */
+        button {
+            /* เปลี่ยนปุ่มเป็น Gradient ม่วง-ชมพู */
+            background: linear-gradient(90deg, #aa076b, #61045f);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px 40px;
+            font-size: 16px;
+            font-family: 'Prompt', sans-serif;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(170, 7, 107, 0.4);
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(170, 7, 107, 0.7);
+            filter: brightness(1.2);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        /* --- Webcam Frame --- */
+        #webcam-container {
+            position: relative;
+            margin: 0 auto;
+            width: 300px;
+            height: 300px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 0, 204, 0.3); /* ขอบสีกระจก */
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
+            background-color: #000;
+        }
+        
+        #webcam-container canvas {
+            display: block; /* แก้ขอบขาวด้านล่าง canvas */
+        }
+
+        /* --- Status & Labels --- */
+        #label-container {
+            margin-top: 25px;
+            text-align: left;
+        }
+
+        .label-row {
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 10px 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 3px solid transparent;
+            transition: border-color 0.3s;
+        }
+        
+        /* เพิ่มลูกเล่นเวลาเมาส์ชี้ */
+        .label-row:hover {
+            border-left: 3px solid #ff00cc;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .label-text {
+            font-size: 14px;
+            font-weight: 500;
+            width: 30%;
+            color: #ddd;
+        }
+
+        /* Progress Bar Styles */
+        .progress-bg {
+            flex-grow: 1;
+            height: 6px; /* ปรับให้บางลงนิดหน่อย */
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 0 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            /* สีเริ่มต้นเป็นโทนส้ม-แดง */
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.2s ease, background 0.2s;
+            box-shadow: 0 0 8px rgba(255, 65, 108, 0.5);
+        }
+        
+        /* เปลี่ยนสีบาร์ตามคะแนน */
+        .high-score {
+            /* สีเขียวนีออนสำหรับค่าที่สูง */
+            background: linear-gradient(90deg, #00f260, #0575e6) !important;
+            box-shadow: 0 0 10px rgba(0, 242, 96, 0.6) !important;
+        }
+
+        .percent-text {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            width: 45px;
+            text-align: right;
+            opacity: 0.9;
+            color: #fff;
+        }
+
+        /* --- Animation --- */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- เปลี่ยนชื่อจาก AI Scanner เป็น Smart Scanner -->
+        <div class="header">Smart Scanner</div>
+        
+        <div class="btn-group">
+            <button type="button" onclick="init()" id="startBtn">Start Camera</button>
+        </div>
+
+        <div id="webcam-container">
+            <!-- กล้องจะแสดงตรงนี้ -->
+        </div>
+        
+        <div id="label-container">
+            <!-- ผลลัพธ์จะแสดงตรงนี้ -->
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <script>
+        // --- Configuration ---
+        const URL = "./my-model/"; // ตรวจสอบว่าโฟลเดอร์นี้มีอยู่จริง
+        
+        let model, webcam, labelContainer, maxPredictions;
+        let isLooping = false;
+
+        async function init() {
+            const startBtn = document.getElementById("startBtn");
+            startBtn.innerHTML = "Loading...";
+            startBtn.disabled = true;
+
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            try {
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                const flip = true; 
+                webcam = new tmImage.Webcam(300, 300, flip); 
+                await webcam.setup(); 
+                await webcam.play();
+                
+                // ซ่อนปุ่มเมื่อโหลดเสร็จ
+                startBtn.style.display = "none";
+
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                
+                // สร้าง Element สำหรับแสดงผลลัพธ์แบบ Progress Bar
+                labelContainer = document.getElementById("label-container");
+                labelContainer.innerHTML = ""; // เคลียร์ของเก่า
+                
+                for (let i = 0; i < maxPredictions; i++) {
+                    // สร้างโครงสร้าง HTML สำหรับแต่ละคลาส
+                    let row = document.createElement("div");
+                    row.className = "label-row";
+                    
+                    let name = document.createElement("div");
+                    name.className = "label-text";
+                    name.id = `label-name-${i}`;
+                    
+                    let progressBg = document.createElement("div");
+                    progressBg.className = "progress-bg";
+                    let progressFill = document.createElement("div");
+                    progressFill.className = "progress-fill";
+                    progressFill.id = `label-bar-${i}`;
+                    progressBg.appendChild(progressFill);
+                    
+                    let percent = document.createElement("div");
+                    percent.className = "percent-text";
+                    percent.id = `label-percent-${i}`;
+                    
+                    row.appendChild(name);
+                    row.appendChild(progressBg);
+                    row.appendChild(percent);
+                    labelContainer.appendChild(row);
+                }
+
+                isLooping = true;
+                window.requestAnimationFrame(loop);
+            } catch (error) {
+                console.error(error);
+                startBtn.innerHTML = "Error loading model";
+                alert("ไม่พบโมเดล! กรุณาตรวจสอบโฟลเดอร์ tm-my-image-model");
+            }
+        }
+
+        async function loop() {
+            if(isLooping){
+                webcam.update(); 
+                await predict();
+                window.requestAnimationFrame(loop);
+            }
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+
+            for (let i = 0; i < maxPredictions; i++) {
+                // ดึงค่า
+                const className = prediction[i].className;
+                const probability = prediction[i].probability;
+                const percentage = (probability * 100).toFixed(0) + "%";
+
+                // อัปเดต UI
+                document.getElementById(`label-name-${i}`).innerText = className;
+                document.getElementById(`label-percent-${i}`).innerText = percentage;
+                
+                const bar = document.getElementById(`label-bar-${i}`);
+                bar.style.width = percentage;
+
+                // เปลี่ยนสีบาร์ถ้าค่าความมั่นใจสูงเกิน 80%
+                if(probability > 0.8) {
+                    bar.classList.add("high-score");
+                } else {
+                    bar.classList.remove("high-score");
+                }
+            }
+        }
+    </script>
+</body>
+</html>
